@@ -79,7 +79,7 @@ def index():
             ],
 
             'layout': {
-                'title': 'Message categories and occurance',
+                'title': 'Histogram of Message Categories',
                 'yaxis': {
                     'title': "Category Count"
                 },
@@ -94,12 +94,11 @@ def index():
                     x=category_names,
                     y=category_names,
                     z=category_corrations,
-                    colorscale='Viridis'
                 )
             ],
 
             'layout': {
-                'title': 'Which pair of categories often occurs ?'
+                'title': 'Heatmap of Message Categories and Occurrences'
             }
         }
     ]
