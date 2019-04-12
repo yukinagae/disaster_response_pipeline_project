@@ -2,12 +2,16 @@ import json
 import plotly
 import pandas as pd
 
+import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Bar, Heatmap
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
@@ -26,11 +30,11 @@ def tokenize(text):
     return clean_tokens
 
 # load data
-engine = create_engine('sqlite:///../data/YourDatabaseName.db')
-df = pd.read_sql_table('YourTableName', engine)
+engine = create_engine('sqlite:///../data/DisasterResponse.db')
+df = pd.read_sql_table('disaster_response', engine)
 
 # load model
-model = joblib.load("../models/your_model_name.pkl")
+model = joblib.load("../models/classifier.pkl")
 
 
 # index webpage displays cool visuals and receives user input text for model
@@ -39,12 +43,14 @@ model = joblib.load("../models/your_model_name.pkl")
 def index():
     
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
+    category_names = df.drop(['id', 'message', 'original', 'genre'], axis=1).columns
+    category_melt = pd.melt(df, id_vars=['id'], value_vars=category_names, var_name='categories', value_name='flag')
+    category_counts = category_melt.groupby('categories')['flag'].sum().sort_values(ascending=False)
+    category_corrations = df[category_names].corr().values
     
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
@@ -57,11 +63,43 @@ def index():
             'layout': {
                 'title': 'Distribution of Message Genres',
                 'yaxis': {
-                    'title': "Count"
+                    'title': "Message Count"
                 },
                 'xaxis': {
-                    'title': "Genre"
+                    'title': "Message Genre"
                 }
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x=category_names,
+                    y=category_counts
+                )
+            ],
+
+            'layout': {
+                'title': 'Message categories and occurance',
+                'yaxis': {
+                    'title': "Category Count"
+                },
+                'xaxis': {
+                    'title': "Category Names"
+                }
+            }
+        },
+        {
+            'data': [
+                Heatmap(
+                    x=category_names,
+                    y=category_names,
+                    z=category_corrations,
+                    colorscale='Viridis'
+                )
+            ],
+
+            'layout': {
+                'title': 'Which pair of categories often occurs ?'
             }
         }
     ]
