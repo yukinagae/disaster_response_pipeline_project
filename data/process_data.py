@@ -1,16 +1,45 @@
 import sys
+import pandas as pd
+from sqlalchemy import create_engine
 
 
 def load_data(messages_filepath, categories_filepath):
-    pass
+
+    messages = pd.read_csv(messages_filepath)      # load messages dataset
+    categories = pd.read_csv(categories_filepath)  # load categories dataset
+    df = messages.merge(categories, on='id')       # merge datasets
+
+    return df
 
 
 def clean_data(df):
-    pass
 
+    # Split `categories` into separate category columns
+    separated_categories = df.categories.str.split(';', expand=True) # create a dataframe of the 36 individual category columns
+    row = separated_categories.iloc[0]                               # select the first row of the categories dataframe
+    category_colnames = row.str.split('-').map(lambda x : x[0])      # use the row to extract a list of new column names for categories.
+    separated_categories.columns = category_colnames                 # rename the columns of `categories`
+    
+    # Convert category values to just numbers 0 or 1
+    for column in separated_categories:
+        # set each value to be the last character of the string
+        separated_categories[column] = separated_categories[column].str.split('-').map(lambda x: x[1])
+        # convert column from string to numeric
+        separated_categories[column] = separated_categories[column].astype(int)
+
+    # Replace `categories` column in `df` with new category columns
+    df = df.drop('categories', axis=1)                 # drop the original categories column from `df`
+    df = pd.concat([df, separated_categories], axis=1) # concatenate the original dataframe with the new `categories` dataframe
+
+    # drop duplicates
+    df = df.drop_duplicates()
+
+    return df
 
 def save_data(df, database_filename):
-    pass  
+    # Save the clean dataset into an sqlite database
+    engine = create_engine('sqlite:///' + database_filename)
+    df.to_sql('disaster_response', engine, index=False)
 
 
 def main():
